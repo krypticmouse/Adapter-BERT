@@ -2,9 +2,9 @@ import torch
 from torch import optim
 import torch.nn as nn
 
-from model import BERTwithAdapter
+from bert import BertModel
 
-model = BERTwithAdapter()
+model = BertModel.from_pretrained('bert-base-uncased')
 
 criterion = nn.BCEWithLogitsLoss()
 optimizer = optim.Adam(model.parameters())
