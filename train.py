@@ -1,32 +1,55 @@
-import torch
-from torch import optim
-import torch.nn as nn
+from config import *
+from torch import nn
+from dataset import CoLADataset
 
-from bert import BertModel
+from model import BertClassifier
+from transformers import Trainer, BertTokenizer, DataCollatorWithPadding, TrainingArguments, AdamW
 
-model = BertModel.from_pretrained('bert-base-uncased')
+class CustomTrainer(Trainer):
+    def compute_loss(self, model, inputs, return_outputs=False):
+        labels = inputs.get("label")
+        # forward pass
+        outputs = model(**inputs['sentence'])
 
-criterion = nn.BCEWithLogitsLoss()
-optimizer = optim.Adam(model.parameters())
+        # compute custom loss (suppose one has 3 labels with different weights)
+        loss_fct = nn.BCEWithLogitsLoss()
+        loss = loss_fct(outputs, labels)
+        return (loss, outputs) if return_outputs else loss
 
-# TODO: Add loggers, parallelism, scheduler
-def train(model, epochs, trainloader, valloader):
-    for e in range(epochs):
-        for batch in trainloader:
-            optimizer.zero_grad(set_to_none=True)
-            label, sent = batch['label'], batch['sentence']
+def train():
+    model = BertClassifier(num_labels = 1)
+    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
-            output = model(**sent)
+    layers = ["adapter", "LayerNorm"]
+    params = [p for n, p in model.named_parameters() \
+                    if any([(nd in n) for nd in layers])]
+    optimizer = AdamW(params)
 
-            loss = criterion(label, output)
-            
-            loss.backward()
-            optimizer.step()
-        
-        with torch.no_grad():
-            for batch in valloader:
-                label, sent = batch['label'], batch['sentence']
+    train_dataset = CoLADataset('data/in_domain_train.tsv', tokenizer)
+    val_dataset = CoLADataset('data/in_domain_dev.tsv', tokenizer)
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+    
+    training_args = TrainingArguments(
+        "adapter-trainer",
+        per_device_train_batch_size = BATCH_SIZE,
+        per_device_eval_batch_size = BATCH_SIZE,
+        evaluation_strategy = 'epoch',
+        learning_rate = LEARNING_RATE,
+        num_train_epochs = EPOCHS,
+        warmup_ratio = 0.1,
+        dataloader_num_workers = 2,
+        dataloader_drop_last = True,
+        seed=42
+    )
 
-                output = model(**sent)
+    trainer = CustomTrainer(
+        model,
+        args=training_args,
+        train_dataset=train_dataset,
+        eval_dataset=val_dataset,
+        data_collator=data_collator,
+        tokenizer=tokenizer,
+        optimizers = optimizer
+    )
 
-                loss = criterion(label, output)
+    trainer.train()
