@@ -1,4 +1,4 @@
-from config import *
+from .configconfig import *
 from torch import nn
 from dataset import CoLADataset
 

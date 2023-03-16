@@ -1,1 +1,1 @@
-from engine import BertClassifier
+from .engine import BertClassifier
