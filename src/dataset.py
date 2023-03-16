@@ -17,10 +17,16 @@ class CoLADataset(Dataset):
     def __getitem__(self, idx):
         data_pt = self.data.iloc[idx]
 
-        tokenized_sentence = self.tokenizer(data_pt['sentence'], return_tensors= 'pt')
-        label = torch.tensor(data_pt["label"])
+        tokenized_sentence = self.tokenizer.encode_plus(
+            data_pt['sentence'], 
+            return_tensors= 'pt',
+            padding="max_length",
+            max_length = 15,
+            truncation=True
+        )
+        label = torch.tensor([data_pt["label"]])
 
         return {
-            "label": label, 
-            "sentence": tokenized_sentence
+            "labels": label, 
+            **tokenized_sentence
         }
