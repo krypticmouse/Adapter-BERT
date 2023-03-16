@@ -6,8 +6,6 @@ import wandb
 from model import BertClassifier
 from transformers import Trainer, BertTokenizer, DataCollatorWithPadding, TrainingArguments, AdamW
 
-wandb.login()
-
 class CustomTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False):
         labels = inputs.get("label")
