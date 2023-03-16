@@ -42,7 +42,9 @@ def train():
         warmup_ratio = 0.1,
         dataloader_num_workers = 2,
         dataloader_drop_last = True,
-        seed=42
+        seed=42,
+        report_to="wandb",
+        run_name="c4ai-adapter-bert"
     )
 
     trainer = CustomTrainer(
